@@ -1537,6 +1537,7 @@ func (this *Impl_`, serviceName, `) `, method, `(stream `, serviceName, `_`, met
 			Query:          mpo.option.GetQuery(),
 			Before:         mpo.option.GetBefore(),
 			After:          mpo.option.GetAfter(),
+			TracingEnabled: s.File.GetTracingOption(),
 		}
 
 		if m.Unary(mpo) {
@@ -1594,6 +1595,11 @@ func WriteImports(p *Printer, f *FileStruct) error {
 
 	if hasSpanner {
 		p.P("%s \"%s\"\n", "iterator", "google.golang.org/api/iterator")
+	}
+
+	if f.GetTracingOption() {
+		p.P("\"%s\"\n", "go.opencensus.io/trace")
+		p.P("%s \"%s\"\n", "grpc_middleware", "github.com/grpc-ecosystem/go-grpc-middleware")
 	}
 
 	p.P(")\n")

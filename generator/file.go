@@ -81,6 +81,26 @@ func (f *FileStruct) NotSameAsMyPackage(pkg string) bool {
 	return !f.IsSameAsMyPackage(pkg)
 }
 
+// extract the tracing file option
+// or return false as the default
+func (f *FileStruct) GetTracingOption() bool {
+	defaultOption := false
+
+	if f == nil || f.Desc == nil || f.Desc.GetOptions() == nil {
+		logrus.Warn("could not find tracing option")
+		return defaultOption
+	}
+	if proto.HasExtension(f.Desc.GetOptions(), persist.E_Tracing) {
+		tracing, err := proto.GetExtension(f.Desc.GetOptions(), persist.E_Tracing)
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to get tracing from extension")
+			return defaultOption
+		}
+		return *tracing.(*bool)
+	}
+	return defaultOption
+}
+
 // extract the persist.package file option
 // or return "" as default
 func (f *FileStruct) GetPersistPackageOption() string {

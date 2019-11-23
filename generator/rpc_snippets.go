@@ -22,6 +22,7 @@ type handlerParams struct {
 	ZeroResponse   bool
 	Before         bool
 	After          bool
+	TracingEnabled bool
 }
 
 func OneOrZero(hp handlerParams) string {
@@ -101,7 +102,17 @@ func WriteClientStreaming(printer *Printer, params *handlerParams, isSql bool) e
 	printerProxy := NewPrinterProxy(printer)
 	sqlClientStreamingFormat := `
 func (this *Impl_{{.Service}}) {{.Method}}(stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultClientStreamingPersistTx(stream.Context(), this.DB)
+    ctx := stream.Context()
+    {{if .TracingEnabled}}
+    {
+	ctx, span := trace.StartSpan(ctx, "persist_{{.Service}}")
+	defer span.End()
+	stream := grpc_middleware.WrapServerStream(stream)
+	stream.WrappedContext = ctx
+    }
+    {{end}}
+
+    tx, err := DefaultClientStreamingPersistTx(ctx, this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
     }
@@ -245,6 +256,13 @@ func WriteUnary(printer *Printer, params *handlerParams, isSql bool) error {
 	printerProxy := NewPrinterProxy(printer)
 	sqlUnaryFormat := `
 func (this *Impl_{{.Service}}) {{.Method}}(ctx context.Context, req *{{.Request}}) (*{{.Response}}, error) {
+    {{if .TracingEnabled}}
+    {
+	ctx, span := trace.StartSpan(ctx, "persist_{{.Service}}")
+	defer span.End()
+    }
+    {{end}}
+
     query := this.QUERIES.{{camelCase .Query}}(ctx, this.DB)
     {{if .Before}}
     {
@@ -323,7 +341,17 @@ func WriteServerStream(printer *Printer, params *handlerParams, isSql bool) erro
 	printerProxy := NewPrinterProxy(printer)
 	sqlServerFormat := `
 func (this *Impl_{{.Service}}) {{.Method}}(req *{{.Request}}, stream {{.Service}}_{{.Method}}Server) error {
-    tx, err := DefaultServerStreamingPersistTx(stream.Context(), this.DB)
+    ctx := stream.Context()
+    {{if .TracingEnabled}}
+    {
+	ctx, span := trace.StartSpan(ctx, "persist_{{.Service}}")
+	defer span.End()
+	stream := grpc_middleware.WrapServerStream(stream)
+	stream.WrappedContext = ctx
+    }
+    {{end}}
+
+    tx, err := DefaultServerStreamingPersistTx(ctx, this.DB)
     if err != nil {
         return gstatus.Errorf(codes.Unknown, "error creating persist tx: %v", err)
     }
