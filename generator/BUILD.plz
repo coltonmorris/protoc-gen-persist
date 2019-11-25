@@ -13,8 +13,10 @@ go_library(
     ],
     deps = [
         '//third_party/go:protobuf',
-        '//persist:persist',
+        '//third_party/go:logrus',
         '//third_party/go:tools',
+       
+        '//persist:persist',
     ],
     visibility = [
         'PUBLIC',
